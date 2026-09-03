@@ -1,4 +1,9 @@
 ; void Application.Terminate(UINT code);
 Application.Terminate:
-    add    esp, 4
-    call   [ExitProcess]
+    push      ebp
+    mov       ebp, esp
+
+    invoke    ExitProcess, dword [ebp + 8]
+
+    leave
+    ret       4
