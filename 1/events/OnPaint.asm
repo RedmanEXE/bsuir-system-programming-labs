@@ -27,10 +27,34 @@
     test      eax, eax
       jz      @F
 
+    ; Cleanup old zone
+    mov       esi, eax
+    movzx     ecx, word [cmSprite.ptOldPos.x]
+    add       cx, word [cmSprite.bmpInfo.bmWidth]
+    movzx     edx, word [cmSprite.ptOldPos.y]
+    add       dx, word [cmSprite.bmpInfo.bmHeight]
+
+    ; RECT END
+    push      edx
+    push      ecx
+    movzx     edx, [cmSprite.ptOldPos.y]
+    movzx     ecx, [cmSprite.ptOldPos.x]
+    push      edx
+    push      ecx
+    ; RECT BEGIN
+    mov       edi, esp
+    invoke    FillRect, ebx, edi, [cmWindow.hbrBg]
+    add       esp, sizeof.RECT
+
+    ; Update "old" position
+    mov       ecx, [cmSprite.ptPosition]
+    mov       [cmSprite.ptOldPos], ecx
+
+    ; Copy sprite
     movzx     ecx, word [cmSprite.ptPosition.x]
     movzx     edx, word [cmSprite.ptPosition.y]
     invoke    BitBlt, ebx, ecx, edx, dword [cmSprite.bmpInfo.bmWidth],\
-              dword [cmSprite.bmpInfo.bmHeight], eax, 0, 0, SRCCOPY
+              dword [cmSprite.bmpInfo.bmHeight], esi, 0, 0, SRCCOPY
 
 @@:
     ; Release HDC from BeginPaint

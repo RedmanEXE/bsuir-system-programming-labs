@@ -1,5 +1,6 @@
     xor       eax, eax
     mov       [cmSprite.ptPosition], eax
+    mov       [cmSprite.ptOldPos], eax
 
     ; Get Device Context of the window
     invoke    GetDC, dword [ebp + 8]

@@ -10,18 +10,33 @@ Application.Setup:
     stdcall   Bitmap.LoadImage, szSpritePath
     mov       [cmSprite.hBitmap], eax
 
+    ; Create background brush
+    invoke    CreateSolidBrush, 0
+    mov       [cmWindow.hbrBg], eax
+
     ; Create main window
-    stdcall   Window.CreateWindow, 320, 200, szClassName, szWindowName, Application.WindowProc
-    mov       [hWindow], eax
+    stdcall   Window.CreateWindow, 320, 200, szClassName, szWindowName, Application.WindowProc, eax
+    mov       [cmWindow.hWindow], eax
 
     ; MSG structure
     sub       esp, sizeof.MSG
 Application.WindowLoop:
     ; Process window messages
-    stdcall   Window.ProcessMessages, dword [hWindow], esp
+    stdcall   Window.ProcessMessages, dword [cmWindow.hWindow], esp
 
     cmp       eax, 0
-      jg      Application.WindowLoop
+      jle     @F
+.ReDraw:
+    ; Place WM_PAINT event to the queue
+    invoke    InvalidateRect, dword [cmWindow.hWindow], NULL, FALSE
+
+    include   './events/OnPhysicsProcess.asm'
+
+    ; Sleep for 1ms to create some sort of CPU "optimization"
+    invoke    Sleep, 1
+
+    jmp       Application.WindowLoop
+@@:
 
     ; Free MSG structure
     add       esp, sizeof.MSG
@@ -41,8 +56,16 @@ Application.WindowProc:
       je      .OnClose
     cmp       eax, WM_DESTROY
       je      .OnDestroy
+    cmp       eax, WM_ERASEBKGND
+      je      .OnEraseBkg
+    cmp       eax, WM_KEYDOWN
+      je      .OnKeyDown
+    cmp       eax, WM_KEYUP
+      je      .OnKeyUp
     cmp       eax, WM_PAINT
       je      .OnPaint
+    cmp       eax, WM_SIZE
+      je      .OnSize
     jmp       .Default
 
 .OnCreate:
@@ -57,9 +80,25 @@ Application.WindowProc:
     include   './events/OnDestroy.asm'
     jmp       .End
 
+.OnEraseBkg:
+    include   './events/OnEraseBkg.asm'
+    jmp       .Default
+
+.OnKeyDown:
+    include   './events/OnKeyDown.asm'
+    jmp       .End
+
+.OnKeyUp:
+    include   './events/OnKeyUp.asm'
+    jmp       .End
+
 .OnPaint:
     include   './events/OnPaint.asm'
     jmp       .End
+
+.OnSize:
+    include   './events/OnResize.asm'
+    jmp       .Default
 
 .Default:
     invoke    DefWindowProc, dword [ebp + 8], dword [ebp + 12], dword [ebp + 16],\
@@ -81,13 +120,20 @@ section '.data' data readable writeable
     szSpritePath      db 'sprite.bmp', 0
 
 section '.bss' data readable writeable
-    hWindow           rd 1
+    cmWindow:
+        .hWindow      rd 1
+        .width        rw 1
+        .height       rw 1
+        .hbrBg        rd 1
     cmSprite:
         .hBitmap      rd 1
         .hOldBitmap   rd 1
         .hMemDC       rd 1
         .bmpInfo      BITMAP
         .ptPosition   POINTS
+        .ptOldPos     POINTS
+    cmKeyboard:              ; 0         8         16        24        32        40
+        .bKeys        rb 5   ; [01234567][89ABCDEF][GHIJKLMN][OPQRSTUV][WXYZ    ]
 
 section '.import' data import readable writeable
     library   kernel32,           'kernel32.dll',\
@@ -96,14 +142,15 @@ section '.import' data import readable writeable
 
     import    kernel32,\
               GetModuleHandle,    'GetModuleHandleA',\
-              ExitProcess,        'ExitProcess'
+              ExitProcess,        'ExitProcess',\
+              Sleep,              'Sleep'
 
     import    user32,\
               RegisterClassEx,    'RegisterClassExA',\
               DefWindowProc,      'DefWindowProcA',\
               CreateWindowEx,     'CreateWindowExA',\
               AdjustWindowRectEx, 'AdjustWindowRectEx',\
-              GetMessage,         'GetMessageA',\
+              PeekMessage,        'PeekMessageA',\
               TranslateMessage,   'TranslateMessage',\
               DispatchMessage,    'DispatchMessageA',\
               PostQuitMessage,    'PostQuitMessage',\
@@ -112,7 +159,10 @@ section '.import' data import readable writeable
               GetClientRect,      'GetClientRect',\
               GetDC,              'GetDC',\
               EndPaint,           'EndPaint',\
-              ReleaseDC,          'ReleaseDC'
+              ReleaseDC,          'ReleaseDC',\
+              InvalidateRect,     'InvalidateRect',\
+              LoadCursor,         'LoadCursorA',\
+              FillRect,           'FillRect'
 
     import    gdi32,\
               CreateCompatibleDC, 'CreateCompatibleDC',\
@@ -120,7 +170,8 @@ section '.import' data import readable writeable
               GetObject,          'GetObjectA',\
               BitBlt,             'BitBlt',\
               DeleteDC,           'DeleteDC',\
-              DeleteObject,       'DeleteObject'
+              DeleteObject,       'DeleteObject',\
+              CreateSolidBrush,   'CreateSolidBrush'
 
 
 

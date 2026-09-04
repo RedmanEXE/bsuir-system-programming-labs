@@ -1,4 +1,4 @@
-; HWND Window.CreateWindow(int iWidth, int iHeight, char *lpszClassName, char *lpszWindowName, WNDPROC fnWindowProc);
+; HWND Window.CreateWindow(int iWidth, int iHeight, char *lpszClassName, char *lpszWindowName, WNDPROC fnWindowProc, HBRUSH hbrBg);
 Window.CreateWindow:
     push      ebp
     mov       ebp, esp
@@ -8,26 +8,32 @@ Window.CreateWindow:
     invoke    GetModuleHandle, NULL
     mov       ebx, eax
     ; Load lpszClassName and lpszWindowName and fnWindowProc values into registers
-    mov       esi, [ebp + 16] ; lpszClassName
-    mov       edi, [ebp + 20] ; lpszWindowName
-    mov       eax, [ebp + 24] ; fnWindowProc
+    mov       esi, [ebp + 16]              ; lpszClassName
+    mov       edi, [ebp + 20]              ; lpszWindowName
+    mov       edx, [ebp + 24]              ; fnWindowProc
+
+    ; Load arrow cursor
+    push      edx
+    invoke    LoadCursor, NULL, IDC_ARROW
+    pop       edx
+    mov       ecx, [ebp + 28]
 
     ; Create WNDCLASSEX structure
     push      ebp
     mov       ebp, esp
     ; WNDCLASSEX END
-    push      NULL
-    push      esi
-    push      NULL
-    push      NULL
-    push      NULL
-    push      NULL
-    push      ebx
-    push      0
-    push      0
-    push      eax
-    push      CS_HREDRAW or CS_VREDRAW
-    push      sizeof.WNDCLASSEX
+    push      NULL                         ; hIconSm
+    push      esi                          ; lpszClassName
+    push      NULL                         ; lpszMenuName
+    push      ecx                          ; hbrBackground
+    push      eax                          ; hCursor
+    push      NULL                         ; hIcon
+    push      ebx                          ; hInstance
+    push      0                            ; cbWndExtra
+    push      0                            ; cbClsExtra
+    push      edx                          ; lpfnWndProc
+    push      CS_HREDRAW or CS_VREDRAW     ; style
+    push      sizeof.WNDCLASSEX            ; cbSize
     ; WNDCLASSEX BEGIN
 
     ; And register it
@@ -59,11 +65,10 @@ Window.CreateWindow:
     ; Create window
     invoke    CreateWindowEx, 0, esi, edi, WS_VISIBLE or WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_THICKFRAME,\
               0, 0, ecx, edx, 0, 0, ebx, 0
-    mov       [hWindow], eax
 
     pop       edi esi ebx edx ecx
     leave
-    ret       20
+    ret       24
 
 ; UINT Window.ProcessMessages(HWND hWnd, LPMSG lpMsg);
 Window.ProcessMessages:
@@ -75,18 +80,21 @@ Window.ProcessMessages:
     mov       eax, [ebp + 8]
 
     ; Retrieve message queue status
-    invoke    GetMessage, esi, eax, 0, 0
+    invoke    PeekMessage, esi, eax, 0, 0, PM_REMOVE
     cmp       eax, 0
-      jle     @F
-    mov       ebx, eax
+      jle     .NotQuitButEmpty
+    movzx     eax, word [esi + 4]
+    cmp       eax, 0
+      jle     .Quit
 
     ; And process it
     invoke    TranslateMessage, esi
     invoke    DispatchMessage, esi
 
-    mov       eax, ebx
-@@:
+.NotQuitButEmpty:
+    mov       eax, 1
+.Quit:
     pop       esi ebx edx
     leave
-    ret     8
+    ret       8
 
