@@ -3,9 +3,20 @@ entry         Application.Setup
 
 include       'win32a.inc'
 include       'constants.inc'
+include       'macroses.inc'
 
 section '.code' code readable executable
 Application.Setup:
+    ; Get HINSTANCE of the program
+    invoke    GetModuleHandle, NULL
+    mov       [hModule], eax
+    ; And load accelerators table
+    invoke    LoadAccelerators, eax, 1
+    mov       [hAccelTable], eax
+    ; Register for MSH_MOUSEWHEEL messages
+    invoke    RegisterWindowMessage, szMouseWheelType
+    mov       [uOldWheelMsgID], eax
+
     ; Load sprite image
     stdcall   Bitmap.LoadImage, szSpritePath
     mov       [cmSprite.hBitmap], eax
@@ -15,7 +26,7 @@ Application.Setup:
     mov       [cmWindow.hbrBg], eax
 
     ; Create main window
-    stdcall   Window.CreateWindow, WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT,\
+    stdcall   Window.CreateWindow, [hModule], WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT,\
               szClassName, szWindowName, Application.WindowProc, eax
     mov       [cmWindow.hWindow], eax
 
@@ -23,7 +34,7 @@ Application.Setup:
     sub       esp, sizeof.MSG
 Application.WindowLoop:
     ; Process window messages
-    stdcall   Window.ProcessMessages, dword [cmWindow.hWindow], esp
+    stdcall   Window.ProcessMessages, [cmWindow.hWindow], [hAccelTable], esp
 
     cmp       eax, 0
       jle     @F
@@ -55,6 +66,8 @@ Application.WindowProc:
       je      .OnCreate
     cmp       eax, WM_CLOSE
       je      .OnClose
+    cmp       eax, WM_COMMAND
+      je      .OnCommand
     cmp       eax, WM_DESTROY
       je      .OnDestroy
     cmp       eax, WM_ERASEBKGND
@@ -67,6 +80,9 @@ Application.WindowProc:
       je      .OnPaint
     cmp       eax, WM_SIZE
       je      .OnSize
+    mov       ecx, [uOldWheelMsgID]
+    cmp       eax, ecx
+      je      .OnOldMouseWheel
     cmp       eax, WM_MOUSEWHEEL
       je      .OnMouseWheel
     jmp       .Default
@@ -77,6 +93,10 @@ Application.WindowProc:
 
 .OnClose:
     include   './events/OnClose.asm'
+    jmp       .End
+
+.OnCommand:
+    include   './events/OnCommand.asm'
     jmp       .End
 
 .OnDestroy:
@@ -95,6 +115,8 @@ Application.WindowProc:
     include   './events/OnKeyUp.asm'
     jmp       .End
 
+.OnOldMouseWheel:
+    include   './events/OnPreOldMouseWheel.asm'
 .OnMouseWheel:
     include   './events/OnMouseWheel.asm'
     jmp       .End
@@ -125,9 +147,14 @@ section '.data' data readable writeable
     szClassName       db 'LabOneWindowClass', 0
     szWindowName      db 'Lab 1', 0
 
+    szMouseWheelType  db 'MSH_MOUSEWHEEL', 0
+
     szSpritePath      db 'sprite.bmp', 0
 
 section '.bss' data readable writeable
+    hAccelTable       rd 1
+    hModule           rd 1
+    uOldWheelMsgID    rd 1
     cmWindow:
         .hWindow      rd 1
         .width        rw 1
@@ -149,7 +176,17 @@ section '.bss' data readable writeable
     cmMouse:
         .wheelAccum   rd 1
 
-section '.import' data import readable writeable
+section '.rsrc' resource data readable
+    directory         RT_ACCELERATOR, accelerators
+
+    resource          accelerators, 1, LANG_NEUTRAL, acAccelTable
+
+    resdata acAccelTable
+        raccel        FVIRTKEY or FCONTROL or FALT, 'X', KEY_ID_EXIT, 0
+        raccel        FVIRTKEY or FSHIFT or FALT,   'C', KEY_ID_EXIT, RACCEL_LAST
+    endres
+
+section '.import' import data readable writeable
     library   kernel32,               'kernel32.dll',\
               user32,                 'user32.dll',\
               gdi32,                  'gdi32.dll'
@@ -176,7 +213,12 @@ section '.import' data import readable writeable
               ReleaseDC,              'ReleaseDC',\
               InvalidateRect,         'InvalidateRect',\
               LoadCursor,             'LoadCursorA',\
-              FillRect,               'FillRect'
+              FillRect,               'FillRect',\
+              LoadAccelerators,       'LoadAcceleratorsA',\
+              TranslateAccelerator,   'TranslateAcceleratorA',\
+              DestroyWindow,          'DestroyWindow',\
+              RegisterWindowMessage,  'RegisterWindowMessageA',\
+              GetKeyState,            'GetKeyState'
 
     import    gdi32,\
               CreateCompatibleDC,     'CreateCompatibleDC',\

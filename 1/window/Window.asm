@@ -24,25 +24,25 @@ Window.CreateBackbuffer:
     leave
     ret       8
 
-; HWND Window.CreateWindow(int iWidth, int iHeight, char *lpszClassName, char *lpszWindowName, WNDPROC fnWindowProc, HBRUSH hbrBg);
+; HWND Window.CreateWindow(HINSTANCE hInstance, int iWidth, int iHeight, char *lpszClassName,
+;                          char *lpszWindowName, WNDPROC fnWindowProc, HBRUSH hbrBg);
 Window.CreateWindow:
     push      ebp
     mov       ebp, esp
     push      ecx edx ebx esi edi
 
     ; Get HINSTANCE value of the program
-    invoke    GetModuleHandle, NULL
-    mov       ebx, eax
+    mov       ebx, [ebp + 8]               ; hInstance
     ; Load lpszClassName and lpszWindowName and fnWindowProc values into registers
-    mov       esi, [ebp + 16]              ; lpszClassName
-    mov       edi, [ebp + 20]              ; lpszWindowName
-    mov       edx, [ebp + 24]              ; fnWindowProc
+    mov       esi, [ebp + 20]              ; lpszClassName
+    mov       edi, [ebp + 24]              ; lpszWindowName
+    mov       edx, [ebp + 28]              ; fnWindowProc
 
     ; Load arrow cursor
     push      edx
     invoke    LoadCursor, NULL, IDC_ARROW
     pop       edx
-    mov       ecx, [ebp + 28]
+    mov       ecx, [ebp + 32]
 
     ; Create WNDCLASSEX structure
     push      ebp
@@ -67,8 +67,8 @@ Window.CreateWindow:
     leave
 
     ; Load width and height into registers
-    mov       ecx, [ebp + 8]  ; iWidth
-    mov       edx, [ebp + 12] ; iHeight
+    mov       ecx, [ebp + 12] ; iWidth
+    mov       edx, [ebp + 16] ; iHeight
     ; Adjust sizes
     push      ebp
     mov       ebp, esp
@@ -94,16 +94,16 @@ Window.CreateWindow:
 
     pop       edi esi ebx edx ecx
     leave
-    ret       24
+    ret       28
 
-; UINT Window.ProcessMessages(HWND hWnd, LPMSG lpMsg);
+; UINT Window.ProcessMessages(HWND hWnd, HACCEL hAccel, LPMSG lpMsg);
 Window.ProcessMessages:
     push      ebp
     mov       ebp, esp
     push      edx ebx esi
     ; Load lpMsg into register
-    mov       esi, [ebp + 12]
-    mov       eax, [ebp + 8]
+    mov       esi, [ebp + 16]      ; lpMsg
+    mov       eax, [ebp + 8]       ; hWnd
 
     ; Retrieve message queue status
     invoke    PeekMessage, esi, eax, 0, 0, PM_REMOVE
@@ -113,9 +113,15 @@ Window.ProcessMessages:
     cmp       eax, 0
       jle     .Quit
 
+    ; Check for accelerator
+    invoke    TranslateAccelerator, [ebp + 8], [ebp + 12], esi
+    test      eax, eax
+      jnz     @F
+
     ; And process it
     invoke    TranslateMessage, esi
     invoke    DispatchMessage, esi
+@@:
 
 .NotQuitButEmpty:
     mov       eax, 1
