@@ -15,7 +15,8 @@ Application.Setup:
     mov       [cmWindow.hbrBg], eax
 
     ; Create main window
-    stdcall   Window.CreateWindow, 320, 200, szClassName, szWindowName, Application.WindowProc, eax
+    stdcall   Window.CreateWindow, WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT,\
+              szClassName, szWindowName, Application.WindowProc, eax
     mov       [cmWindow.hWindow], eax
 
     ; MSG structure
@@ -33,7 +34,7 @@ Application.WindowLoop:
     include   './events/OnPhysicsProcess.asm'
 
     ; Sleep for 1ms to create some sort of CPU "optimization"
-    invoke    Sleep, 1
+    ; invoke    Sleep, 1
 
     jmp       Application.WindowLoop
 @@:
@@ -66,6 +67,8 @@ Application.WindowProc:
       je      .OnPaint
     cmp       eax, WM_SIZE
       je      .OnSize
+    cmp       eax, WM_MOUSEWHEEL
+      je      .OnMouseWheel
     jmp       .Default
 
 .OnCreate:
@@ -82,7 +85,7 @@ Application.WindowProc:
 
 .OnEraseBkg:
     include   './events/OnEraseBkg.asm'
-    jmp       .Default
+    jmp       .End
 
 .OnKeyDown:
     include   './events/OnKeyDown.asm'
@@ -90,6 +93,10 @@ Application.WindowProc:
 
 .OnKeyUp:
     include   './events/OnKeyUp.asm'
+    jmp       .End
+
+.OnMouseWheel:
+    include   './events/OnMouseWheel.asm'
     jmp       .End
 
 .OnPaint:
@@ -111,6 +118,7 @@ Application.WindowProc:
 
     include   './application/Application.asm'
     include   './bitmap/Bitmap.asm'
+    include   './player/Player.asm'
     include   './window/Window.asm'
 
 section '.data' data readable writeable
@@ -125,6 +133,9 @@ section '.bss' data readable writeable
         .width        rw 1
         .height       rw 1
         .hbrBg        rd 1
+        .hBBufMemDC   rd 1
+        .hBBufBitmap  rd 1
+        .hBBufOldBmp  rd 1
     cmSprite:
         .hBitmap      rd 1
         .hOldBitmap   rd 1
@@ -132,46 +143,50 @@ section '.bss' data readable writeable
         .bmpInfo      BITMAP
         .ptPosition   POINTS
         .ptOldPos     POINTS
+        .ptMoveAccum  POINTS
     cmKeyboard:              ; 0         8         16        24        32        40
         .bKeys        rb 5   ; [01234567][89ABCDEF][GHIJKLMN][OPQRSTUV][WXYZ    ]
+    cmMouse:
+        .wheelAccum   rd 1
 
 section '.import' data import readable writeable
-    library   kernel32,           'kernel32.dll',\
-              user32,             'user32.dll',\
-              gdi32,              'gdi32.dll'
+    library   kernel32,               'kernel32.dll',\
+              user32,                 'user32.dll',\
+              gdi32,                  'gdi32.dll'
 
     import    kernel32,\
-              GetModuleHandle,    'GetModuleHandleA',\
-              ExitProcess,        'ExitProcess',\
-              Sleep,              'Sleep'
+              GetModuleHandle,        'GetModuleHandleA',\
+              ExitProcess,            'ExitProcess',\
+              Sleep,                  'Sleep'
 
     import    user32,\
-              RegisterClassEx,    'RegisterClassExA',\
-              DefWindowProc,      'DefWindowProcA',\
-              CreateWindowEx,     'CreateWindowExA',\
-              AdjustWindowRectEx, 'AdjustWindowRectEx',\
-              PeekMessage,        'PeekMessageA',\
-              TranslateMessage,   'TranslateMessage',\
-              DispatchMessage,    'DispatchMessageA',\
-              PostQuitMessage,    'PostQuitMessage',\
-              BeginPaint,         'BeginPaint',\
-              LoadImage,          'LoadImageA',\
-              GetClientRect,      'GetClientRect',\
-              GetDC,              'GetDC',\
-              EndPaint,           'EndPaint',\
-              ReleaseDC,          'ReleaseDC',\
-              InvalidateRect,     'InvalidateRect',\
-              LoadCursor,         'LoadCursorA',\
-              FillRect,           'FillRect'
+              RegisterClassEx,        'RegisterClassExA',\
+              DefWindowProc,          'DefWindowProcA',\
+              CreateWindowEx,         'CreateWindowExA',\
+              AdjustWindowRectEx,     'AdjustWindowRectEx',\
+              PeekMessage,            'PeekMessageA',\
+              TranslateMessage,       'TranslateMessage',\
+              DispatchMessage,        'DispatchMessageA',\
+              PostQuitMessage,        'PostQuitMessage',\
+              BeginPaint,             'BeginPaint',\
+              LoadImage,              'LoadImageA',\
+              GetClientRect,          'GetClientRect',\
+              GetDC,                  'GetDC',\
+              EndPaint,               'EndPaint',\
+              ReleaseDC,              'ReleaseDC',\
+              InvalidateRect,         'InvalidateRect',\
+              LoadCursor,             'LoadCursorA',\
+              FillRect,               'FillRect'
 
     import    gdi32,\
-              CreateCompatibleDC, 'CreateCompatibleDC',\
-              SelectObject,       'SelectObject',\
-              GetObject,          'GetObjectA',\
-              BitBlt,             'BitBlt',\
-              DeleteDC,           'DeleteDC',\
-              DeleteObject,       'DeleteObject',\
-              CreateSolidBrush,   'CreateSolidBrush'
+              CreateCompatibleDC,     'CreateCompatibleDC',\
+              SelectObject,           'SelectObject',\
+              GetObject,              'GetObjectA',\
+              BitBlt,                 'BitBlt',\
+              DeleteDC,               'DeleteDC',\
+              DeleteObject,           'DeleteObject',\
+              CreateSolidBrush,       'CreateSolidBrush',\
+              CreateCompatibleBitmap, 'CreateCompatibleBitmap'
 
 
 

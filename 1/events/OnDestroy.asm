@@ -12,5 +12,6 @@
     ; And free bitmap
     invoke    DeleteObject, eax
 @@:
+
     ; Then call PostQuitMessage to send WM_QUIT
     invoke    PostQuitMessage, 0

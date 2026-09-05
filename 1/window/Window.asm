@@ -1,3 +1,29 @@
+; void Window.CreateBackbuffer(Window *cmWindow, HDC hDC)
+Window.CreateBackbuffer:
+    push      ebp
+    mov       ebp, esp
+    push      ecx edx ebx esi edi
+
+    mov       ebx, [ebp + 12]      ; hDC
+    mov       esi, [ebp + 8]       ; cmWindow
+    ; Create backbuffer DC for window
+    invoke    CreateCompatibleDC, ebx
+    mov       [esi + 12], eax      ; cmWindow.hBBufMemDC
+    mov       edi, eax
+    ; Create bitmap for backbuffer
+    movzx     ecx, word [esi + 4]  ; cmWindow.width
+    movzx     edx, word [esi + 6]  ; cmWindow.height
+    invoke    CreateCompatibleBitmap, ebx, ecx, edx
+    mov       [esi + 16], eax      ; cmWindow.hBBufBitmap
+    ; Select bitmap as backbuffer object
+    invoke    SelectObject, edi, eax
+    ; Save old bitmap
+    mov       [esi + 20], eax      ; cmWindow.hBBufOldBmp
+
+    pop       edi esi ebx edx ecx
+    leave
+    ret       8
+
 ; HWND Window.CreateWindow(int iWidth, int iHeight, char *lpszClassName, char *lpszWindowName, WNDPROC fnWindowProc, HBRUSH hbrBg);
 Window.CreateWindow:
     push      ebp
@@ -64,7 +90,7 @@ Window.CreateWindow:
 
     ; Create window
     invoke    CreateWindowEx, 0, esi, edi, WS_VISIBLE or WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_THICKFRAME,\
-              0, 0, ecx, edx, 0, 0, ebx, 0
+              CW_USEDEFAULT, CW_USEDEFAULT, ecx, edx, 0, 0, ebx, 0
 
     pop       edi esi ebx edx ecx
     leave

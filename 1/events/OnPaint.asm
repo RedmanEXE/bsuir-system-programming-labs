@@ -15,12 +15,8 @@
     cmp       edx, 0
       jle     .SkipOnDraw
 
-    ; Allocate space for PAINTSTRUCT
-    sub       esp, sizeof.PAINTSTRUCT
-
-    ; Get HDC of the window
-    invoke    BeginPaint, dword [ebp + 8], esp
-    mov       ebx, eax
+    ; Get HDC of the backbuffer
+    mov       ebx, [cmWindow.hBBufMemDC]
 
     ; Draw
     mov       eax, [cmSprite.hMemDC]
@@ -37,8 +33,8 @@
     ; RECT END
     push      edx
     push      ecx
-    movzx     edx, [cmSprite.ptOldPos.y]
-    movzx     ecx, [cmSprite.ptOldPos.x]
+    movzx     edx, word [cmSprite.ptOldPos.y]
+    movzx     ecx, word [cmSprite.ptOldPos.x]
     push      edx
     push      ecx
     ; RECT BEGIN
@@ -51,12 +47,23 @@
     mov       [cmSprite.ptOldPos], ecx
 
     ; Copy sprite
-    movzx     ecx, word [cmSprite.ptPosition.x]
-    movzx     edx, word [cmSprite.ptPosition.y]
+    movsx     ecx, word [cmSprite.ptPosition.x]
+    movsx     edx, word [cmSprite.ptPosition.y]
     invoke    BitBlt, ebx, ecx, edx, dword [cmSprite.bmpInfo.bmWidth],\
               dword [cmSprite.bmpInfo.bmHeight], esi, 0, 0, SRCCOPY
 
 @@:
+    ; Allocate space for PAINTSTRUCT
+    sub       esp, sizeof.PAINTSTRUCT
+
+    ; Get window DC to draw backbuffer
+    invoke    BeginPaint, dword [ebp + 8], esp
+    ; Copy backbuffer
+    movzx     ecx, word [cmWindow.width]
+    movzx     edx, word [cmWindow.height]
+    invoke    BitBlt, eax, 0, 0, ecx, edx, ebx,\
+              0, 0, SRCCOPY
+
     ; Release HDC from BeginPaint
     invoke    EndPaint, dword [ebp + 8], esp
 
