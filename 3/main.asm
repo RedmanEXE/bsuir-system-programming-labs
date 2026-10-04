@@ -215,8 +215,8 @@ endp
     include   './ui/filedialog/SaveFileDialog.asm'
 
 section '.data' data readable writeable
-    szClassName            du 'BWFilterWindowClass', 0
-    szWindowName           du 'B/W Filter', 0
+    szClassName            db 'BWFilterWindowClass', 0
+    szWindowName           db 'B/W Filter', 0
 
     szButtonClassName      du 'BUTTON', 0
     szImageViewClassName   du 'ImageViewControl', 0
@@ -309,15 +309,44 @@ section '.rsrc' resource data readable
     endres
 
 section '.import' import data readable writeable
-    library   kernel32,                   'kernel32.dll',\
+    library   unicows,                    'unicows.dll',\
+              kernel32,                   'kernel32.dll',\
               user32,                     'user32.dll',\
               gdi32,                      'gdi32.dll',\
               comctl32,                   'comctl32.dll',\
-              comdlg32,                   'comdlg32.dll',\
               shell32,                    'shell32.dll'
 
-    import    kernel32,\
+    import    unicows,\
               GetModuleHandle,            'GetModuleHandleW',\
+              CreateEvent,                'CreateEventW',\
+              CreateSemaphore,            'CreateSemaphoreW',\
+              CreateFile,                 'CreateFileW',\
+              RegisterClassEx,            'RegisterClassExW',\
+              DefWindowProc,              'DefWindowProcW',\
+              CreateWindowEx,             'CreateWindowExW',\
+              GetMessage,                 'GetMessageW',\
+              DispatchMessage,            'DispatchMessageW',\
+              PostMessage,                'PostMessageW',\
+              LoadImage,                  'LoadImageW',\
+              LoadCursor,                 'LoadCursorW',\
+              LoadAccelerators,           'LoadAcceleratorsW',\
+              TranslateAccelerator,       'TranslateAcceleratorW',\
+              RegisterWindowMessage,      'RegisterWindowMessageW',\
+              DrawText,                   'DrawTextW',\
+              GetWindowLong,              'GetWindowLongW',\
+              SetWindowLong,              'SetWindowLongW',\
+              SendMessage,                'SendMessageW',\
+              SystemParametersInfo,       'SystemParametersInfoW',\
+              SetWindowText,              'SetWindowTextW',\
+              IsDialogMessage,            'IsDialogMessageW',\
+              GetObject,                  'GetObjectW',\
+              CreateFont,                 'CreateFontW',\
+              CreateFontIndirect,         'CreateFontIndirectW',\
+              GetOpenFileName,            'GetOpenFileNameW',\
+              GetSaveFileName,            'GetSaveFileNameW',\
+              DragQueryFile,              'DragQueryFileW'
+
+    import    kernel32,\
               ExitProcess,                'ExitProcess',\
               Sleep,                      'Sleep',\
               GetProcessHeap,             'GetProcessHeap',\
@@ -333,57 +362,35 @@ section '.import' import data readable writeable
               CloseHandle,                'CloseHandle',\
               WaitForSingleObject,        'WaitForSingleObject',\
               WaitForMultipleObjects,     'WaitForMultipleObjects',\
-              CreateEvent,                'CreateEventW',\
               SetEvent,                   'SetEvent',\
               ResetEvent,                 'ResetEvent',\
-              CreateSemaphore,            'CreateSemaphoreW',\
               ReleaseSemaphore,           'ReleaseSemaphore',\
-              CreateFile,                 'CreateFileW',\
               WriteFile,                  'WriteFile',\
               ReadFile,                   'ReadFile',\
               SetFilePointer,             'SetFilePointer'
 
     import    user32,\
-              RegisterClassEx,            'RegisterClassExW',\
-              DefWindowProc,              'DefWindowProcW',\
-              CreateWindowEx,             'CreateWindowExW',\
               AdjustWindowRectEx,         'AdjustWindowRectEx',\
-              GetMessage,                 'GetMessageW',\
               TranslateMessage,           'TranslateMessage',\
-              DispatchMessage,            'DispatchMessageW',\
               PostQuitMessage,            'PostQuitMessage',\
-              PostMessage,                'PostMessageW',\
               BeginPaint,                 'BeginPaint',\
-              LoadImage,                  'LoadImageW',\
               GetClientRect,              'GetClientRect',\
               GetDC,                      'GetDC',\
               EndPaint,                   'EndPaint',\
               ReleaseDC,                  'ReleaseDC',\
               InvalidateRect,             'InvalidateRect',\
-              LoadCursor,                 'LoadCursorW',\
               FillRect,                   'FillRect',\
-              LoadAccelerators,           'LoadAcceleratorsW',\
-              TranslateAccelerator,       'TranslateAcceleratorW',\
               DestroyWindow,              'DestroyWindow',\
-              RegisterWindowMessage,      'RegisterWindowMessageW',\
               GetKeyState,                'GetKeyState',\
               FrameRect,                  'FrameRect',\
-              DrawText,                   'DrawTextW',\
-              GetWindowLong,              'GetWindowLongW',\
-              SetWindowLong,              'SetWindowLongW',\
-              SendMessage,                'SendMessageW',\
-              SystemParametersInfo,       'SystemParametersInfoW',\
-              SetWindowText,              'SetWindowTextW',\
               EnableWindow,               'EnableWindow',\
               UpdateWindow,               'UpdateWindow',\
               MoveWindow,                 'MoveWindow',\
-              GetParent,                  'GetParent',\
-              IsDialogMessage,            'IsDialogMessageW'
+              GetParent,                  'GetParent'
 
     import    gdi32,\
               CreateCompatibleDC,         'CreateCompatibleDC',\
               SelectObject,               'SelectObject',\
-              GetObject,                  'GetObjectW',\
               BitBlt,                     'BitBlt',\
               DeleteDC,                   'DeleteDC',\
               DeleteObject,               'DeleteObject',\
@@ -392,19 +399,12 @@ section '.import' import data readable writeable
               GetStockObject,             'GetStockObject',\
               SetBkMode,                  'SetBkMode',\
               SetTextColor,               'SetTextColor',\
-              CreateFont,                 'CreateFontW',\
-              CreateFontIndirect,         'CreateFontIndirectW',\
               StretchDIBits,              'StretchDIBits',\
               SetStretchBltMode,          'SetStretchBltMode'
 
     import    comctl32,\
               InitCommonControlsEx,       'InitCommonControlsEx'
 
-    import    comdlg32,\
-              GetOpenFileName,            'GetOpenFileNameW',\
-              GetSaveFileName,            'GetSaveFileNameW'
-
     import    shell32,\
-              DragQueryFile,              'DragQueryFileW',\
               DragFinish,                 'DragFinish',\
               DragAcceptFiles,            'DragAcceptFiles'
