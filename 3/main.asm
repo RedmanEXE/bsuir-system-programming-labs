@@ -215,8 +215,8 @@ endp
     include   './ui/filedialog/SaveFileDialog.asm'
 
 section '.data' data readable writeable
-    szClassName            du 'LabThreeWindowClass', 0
-    szWindowName           du 'Lab 3', 0
+    szClassName            du 'BWFilterWindowClass', 0
+    szWindowName           du 'B/W Filter', 0
 
     szButtonClassName      du 'BUTTON', 0
     szImageViewClassName   du 'ImageViewControl', 0
