@@ -148,7 +148,7 @@ proc Application.WindowProc stdcall uses ebx esi,\
     ; Add newly loaded image to list
     movzx     eax, word [dwPages + 2]
     cmp       eax, MAX_IMAGE_COUNT
-      jae     .End
+      jae     .ImageLimitReached
 
     mov       [lpImagesList + eax * 4], edi
     inc       eax
@@ -157,6 +157,21 @@ proc Application.WindowProc stdcall uses ebx esi,\
 
     ; Switch to this image and update UI
     stdcall   LabThree.MovePage, 0
+    jmp       .End
+
+.ImageLimitReached:
+    virtual at edi
+        .overflowImg MIMAGE
+    end virtual
+    cmp       [.overflowImg.lpBits], 0
+      je      @F
+    stdcall   Memory.Free, [cmApplication.hMemHeap], [.overflowImg.lpBits]
+@@:
+    cmp       [.overflowImg.hEventComplete], 0
+      je      @F
+    invoke    CloseHandle, [.overflowImg.hEventComplete]
+@@:
+    stdcall   Memory.Free, [cmApplication.hMemHeap], edi
     jmp       .End
 
 .OnChunkReady:
@@ -265,7 +280,7 @@ section '.bss' data readable writeable
     bImageViewClassRegistered rd 1
     lpImagesList           rd MAX_IMAGE_COUNT
 
-    szPathFilter           rw 260
+    szPathFilter           rw 8192
     szSavePathFilter       rw 260
     szSubmitPathBuffer     rw 260
     szDropPathBuffer       rw 260

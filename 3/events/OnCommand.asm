@@ -43,11 +43,11 @@
     jmp       .EndCommand
 
 .ProcessLoadBtn:
-    stdcall   OpenFileDialog.Show, [hWnd], szOpenImageFilter, szPathFilter, 260
+    stdcall   OpenFileDialog.Show, [hWnd], szOpenImageFilter, szPathFilter, 8192
     test      eax, eax
       jz      .EndCommand
 
-    stdcall   Pipeline.SubmitFile, szPathFilter
+    stdcall   OpenFileDialog.SubmitFiles, szPathFilter
     jmp       .EndCommand
 
 .ProcessSaveBtn:

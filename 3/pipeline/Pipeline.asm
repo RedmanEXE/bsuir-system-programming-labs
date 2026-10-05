@@ -12,22 +12,22 @@ proc Pipeline.Initialize stdcall uses ecx edx ebx esi edi
     mov       [hSubmitPathEvent], eax
 
     ; 2. Create concurrent ring buffers
-    stdcall   ConcurrentRingBuffer.Initialize, sizeof.MLOADTASK, 16
+    stdcall   ConcurrentRingBuffer.Initialize, sizeof.MLOADTASK, 64
     mov       [hLoadQueue], eax
 
-    stdcall   ConcurrentRingBuffer.Initialize, 4, 16
+    stdcall   ConcurrentRingBuffer.Initialize, 4, 64
     mov       [hTransformQueue], eax
 
-    stdcall   ConcurrentRingBuffer.Initialize, sizeof.MSAVETASK, 16
+    stdcall   ConcurrentRingBuffer.Initialize, sizeof.MSAVETASK, 64
     mov       [hSaveQueue], eax
 
     ; 3. Create thread pools
-    ; Load pool: 2 threads, 32 tasks capacity
-    stdcall   ThreadPool.Create, 2, 32
+    ; Load pool: 2 threads, 64 tasks capacity
+    stdcall   ThreadPool.Create, 2, 64
     mov       [hLoadPool], eax
 
-    ; Transform pool: 4 threads, 64 tasks capacity
-    stdcall   ThreadPool.Create, 4, 64
+    ; Transform pool: 4 threads, 128 tasks capacity
+    stdcall   ThreadPool.Create, 4, 128
     mov       [hTransformPool], eax
 
     ; 4. Create Task Dispatcher between transform queue and pool
@@ -55,15 +55,20 @@ endp
 ; VOID Pipeline.SubmitFile(LPWSTR lpszFilePath)
 proc Pipeline.SubmitFile stdcall uses ecx esi edi,\
      lpszFilePath:DWORD
-    ; Copy file path to shared buffer
+    locals
+        .loadTask       MLOADTASK
+    endl
+    ; Prepare load task
+    mov       [.loadTask.dwTaskId], 1
     mov       esi, [lpszFilePath]
-    mov       edi, szSubmitPathBuffer
+    lea       edi, [.loadTask.szFilePath]
     mov       ecx, 260
     cld
       rep movsw
 
-    ; Signal path pusher thread
-    invoke    SetEvent, [hSubmitPathEvent]
+    ; Directly add task to the load queue
+    lea       eax, [.loadTask]
+    stdcall   ConcurrentRingBuffer.AddItem, [hLoadQueue], eax
     ret
 endp
 
